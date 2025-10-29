@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import useSWR from "swr"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -27,12 +26,9 @@ function useDebouncedValue<T>(value: T, delay = 250) {
 
 function getStatusChipClass(statusText: string) {
   const s = statusText.toLowerCase()
-  if (s.includes("active")) {
-    return "bg-accent text-accent-foreground"
-  }
-  if (s.includes("inactive") || s.includes("inact") || s.includes("involuntary") || s.includes("revoked")) {
+  if (s.includes("active")) return "bg-accent text-accent-foreground"
+  if (s.includes("inactive") || s.includes("revoked") || s.includes("involuntary"))
     return "bg-destructive text-primary-foreground"
-  }
   return "bg-muted text-muted-foreground"
 }
 
@@ -65,7 +61,6 @@ export function SunbizSearch({
     setHighlighted(0)
   }, [shouldSearch, isLoading, results])
 
-  // Close on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (!containerRef.current?.contains(e.target as Node)) setOpen(false)
@@ -103,10 +98,13 @@ export function SunbizSearch({
       <label htmlFor="sunbiz-search" className="sr-only">
         Company search
       </label>
+
       <Input
         id="sunbiz-search"
         type="search"
         placeholder={placeholder}
+        aria-label="Search for a registered Florida company"
+        title="Search for a registered Florida company"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => shouldSearch && setOpen(true)}
@@ -121,9 +119,10 @@ export function SunbizSearch({
         <div
           id="sunbiz-suggestions"
           role="listbox"
+          aria-label="Search results"
           className={cn(
             "mt-2 rounded-lg border-2 border-primary/30 bg-popover/95 text-popover-foreground shadow-lg supports-[backdrop-filter]:bg-popover/80 backdrop-blur",
-            "w-full overflow-hidden",
+            "w-full overflow-hidden"
           )}
         >
           {isLoading ? (
@@ -133,47 +132,53 @@ export function SunbizSearch({
           ) : results.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">No results found</div>
           ) : (
-            <ul className="max-h-96 overflow-auto">
+            <ul className="max-h-96 overflow-auto" role="presentation">
               {results.map((item, idx) => {
                 const statusText = (item.status || "").trim()
                 return (
                   <li
                     key={`${item.documentNumber ?? item.url ?? item.name}-${idx}`}
                     role="option"
-                    aria-selected={idx === highlighted}
+                    aria-selected={(highlighted === idx).toString()} // ✅ fixed and warning-free
+                    tabIndex={-1}
                     className={cn(
-                      "cursor-pointer px-4 py-3 text-base",
-                      idx === highlighted ? "bg-primary text-primary-foreground" : "hover:bg-primary/10",
+                      "cursor-pointer px-4 py-3 text-base outline-none",
+                      highlighted === idx
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-primary/10"
                     )}
                     onMouseEnter={() => setHighlighted(idx)}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                    }}
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleSelect(item)}
                   >
                     <div className="font-medium text-pretty">{item.name}</div>
                     <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                      {statusText ? (
+                      {statusText && (
                         <span
                           className={cn(
                             "inline-flex items-center rounded px-1.5 py-0.5",
-                            getStatusChipClass(statusText),
+                            getStatusChipClass(statusText)
                           )}
                         >
                           {statusText}
                         </span>
-                      ) : null}
-                      {item.documentNumber ? (
-                        <span className="text-muted-foreground/80">Doc #{item.documentNumber}</span>
-                      ) : null}
+                      )}
+                      {item.documentNumber && (
+                        <span className="text-muted-foreground/80">
+                          Doc #{item.documentNumber}
+                        </span>
+                      )}
                     </div>
                   </li>
                 )
               })}
             </ul>
           )}
+
           {results.length > 0 && (
-            <div className="px-3 py-2 border-t text-xs text-muted-foreground">Results powered by sunbiz.org</div>
+            <div className="px-3 py-2 border-t text-xs text-muted-foreground">
+              Results powered by sunbiz.org
+            </div>
           )}
         </div>
       )}
